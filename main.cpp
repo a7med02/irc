@@ -31,7 +31,7 @@ int main()
     server_address.sin_family = AF_INET; 
     server_address.sin_addr.s_addr = INADDR_ANY;
     server_address.sin_port = htons(3500); 
-    server_address.sin_zero[8] = '\0';
+    server_address.sin_zero[7] = '\0';
     status = bind(sockfd, (struct sockaddr *)&server_address, sizeof(server_address));
     if (status == -1)
     {
@@ -51,6 +51,7 @@ int main()
         std::cout << "Failed to accept" << std::endl;
         return 1;
     }
+    std::cout << "Hang \n";
     status = recv(client_sockfd, buffer, 100, 0);
     if (status == -1)
     {
@@ -58,7 +59,7 @@ int main()
         return 1;
     }
     std::cout << "Received message: " << buffer << std::endl;
-    status = send(client_sockfd, "Hello from server", 100, 0);
+    status = send(client_sockfd, "Hello from server\n", 19, 0);
     if (status == -1)
     {
         std::cout << "Failed to send" << std::endl;
