@@ -4,6 +4,7 @@
 #include <netinet/tcp.h>
 #include <netinet/in.h>
 #include <unistd.h>
+#include <poll.h>
 
 
 int main()
@@ -15,8 +16,13 @@ int main()
     int client_sockfd;
     struct sockaddr_in server_address;
     struct sockaddr_in client_address;
+
+    struct pollfd fds;
+    fds.events = POLLIN;
+
     char buffer[100];
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    fds.fd = sockfd;
     if (sockfd == -1)
     {
         std::cout << "Failed to create socket" << std::endl;
@@ -29,13 +35,24 @@ int main()
         return 1;
     }
     server_address.sin_family = AF_INET; 
-    server_address.sin_addr.s_addr = INADDR_ANY;
-    server_address.sin_port = htons(3500); 
+    server_address.sin_addr.s_addr = INADDR_ANY; // it represents any address of the machine
+    server_address.sin_port = htons(5000); 
     server_address.sin_zero[7] = '\0';
     status = bind(sockfd, (struct sockaddr *)&server_address, sizeof(server_address));
     if (status == -1)
     {
         std::cout << "Failed to bind socket" << std::endl;
+        return 1;
+    }
+    int ret = poll(&fds, 1, 5000);
+    if (ret == 0)
+    {
+        std::cout << "Timeout" << std::endl;
+        return 1;
+    }
+    else if (ret == -1)
+    {
+        std::cout << "Failed to poll" << std::endl;
         return 1;
     }
     status = listen(sockfd, 5);
@@ -60,7 +77,7 @@ int main()
     }
     std::cout << "Received message: " << buffer << std::endl;
     status = send(client_sockfd, "Hello from server\n", 19, 0);
-    if (status == -1)
+     if (status == -1)
     {
         std::cout << "Failed to send" << std::endl;
         return 1;
