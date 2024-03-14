@@ -12,7 +12,7 @@ int perr(int n, std::string err)
 {
     if (n == -1){
       perror(err.c_str());
-      exit(1);
+      //exit(1);
     }
     return n;
 }
@@ -45,7 +45,7 @@ int main()
     addrlen = sizeof(client_address);
     while (1)
     {
-        client_sockfd = perr(accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen), "Failed to accept");
+        client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
         if (client_sockfd == -1)
         {
           if (errno == EWOULDBLOCK)
