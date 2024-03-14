@@ -6,6 +6,16 @@
 #include <unistd.h>
 #include <poll.h>
 #include <fcntl.h>
+#include <errno.h>
+
+int perr(int n, std::string err)
+{
+    if (n == -1){
+      perror(err.c_str());
+      exit(1);
+    }
+    return n;
+}
 
 
 int main()
@@ -55,8 +65,8 @@ int main()
     }
     addrlen = sizeof(client_address);
     for (;;) {
-    int client_socket_fd = accept(sockfd, NULL, NULL);
-    if (client_socket_fd == -1) {
+    client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
+    if (client_sockfd == -1) {
       if (errno == EWOULDBLOCK) {
         printf("No pending connections; sleeping for one second.\n");
         sleep(1);
@@ -67,8 +77,8 @@ int main()
     } else {
       char msg[] = "hello\n";
       printf("Got a connection; writing 'hello' then closing.\n");
-      send(client_socket_fd, msg, sizeof(msg), 0);
-      close(client_socket_fd);
+      send(client_sockfd, msg, sizeof(msg), 0);
+      close(client_sockfd);
     }
   }
     // client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
