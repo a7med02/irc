@@ -5,6 +5,7 @@
 #include <netinet/in.h>
 #include <unistd.h>
 #include <poll.h>
+#include <fcntl.h>
 
 
 int main()
@@ -22,6 +23,7 @@ int main()
 
     char buffer[100];
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
+    fcntl(sockfd, F_SETFL, O_NONBLOCK);
     fds.fd = sockfd;
     if (sockfd == -1)
     {
@@ -44,17 +46,7 @@ int main()
         std::cout << "Failed to bind socket" << std::endl;
         return 1;
     }
-    int ret = poll(&fds, 1, 5000);
-    if (ret == 0)
-    {
-        std::cout << "Timeout" << std::endl;
-        return 1;
-    }
-    else if (ret == -1)
-    {
-        std::cout << "Failed to poll" << std::endl;
-        return 1;
-    }
+
     status = listen(sockfd, 5);
     if (status == -1)
     {
@@ -62,27 +54,44 @@ int main()
         return 1;
     }
     addrlen = sizeof(client_address);
-    client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
-    if (client_sockfd == -1)
-    {
-        std::cout << "Failed to accept" << std::endl;
-        return 1;
+    for (;;) {
+    int client_socket_fd = accept(sockfd, NULL, NULL);
+    if (client_socket_fd == -1) {
+      if (errno == EWOULDBLOCK) {
+        printf("No pending connections; sleeping for one second.\n");
+        sleep(1);
+      } else {
+        perror("error when accepting connection");
+        exit(1);
+      }
+    } else {
+      char msg[] = "hello\n";
+      printf("Got a connection; writing 'hello' then closing.\n");
+      send(client_socket_fd, msg, sizeof(msg), 0);
+      close(client_socket_fd);
     }
-    std::cout << "Hang \n";
-    status = recv(client_sockfd, buffer, 100, 0);
-    if (status == -1)
-    {
-        std::cout << "Failed to receive" << std::endl;
-        return 1;
-    }
-    std::cout << "Received message: " << buffer << std::endl;
-    status = send(client_sockfd, "Hello from server\n", 19, 0);
-     if (status == -1)
-    {
-        std::cout << "Failed to send" << std::endl;
-        return 1;
-    }
-    close(client_sockfd);
+  }
+    // client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
+    // if (client_sockfd == -1)
+    // {
+    //     std::cout << "Failed to accept" << std::endl;
+    //     return 1;
+    // }
+    // std::cout << "Hang \n";
+    // status = recv(client_sockfd, buffer, 100, 0);
+    // if (status == -1)
+    // {
+    //     std::cout << "Failed to receive" << std::endl;
+    //     return 1;
+    // }
+    // std::cout << "Received message: " << buffer << std::endl;
+    // status = send(client_sockfd, "Hello from server\n", 19, 0);
+    //  if (status == -1)
+    // {
+    //     std::cout << "Failed to send" << std::endl;
+    //     return 1;
+    // }
+    // close(client_sockfd);
     close(sockfd);
     return 0;
 }
