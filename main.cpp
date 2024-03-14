@@ -32,76 +32,40 @@ int main()
     fds.events = POLLIN;
 
     char buffer[100];
-    sockfd = socket(AF_INET, SOCK_STREAM, 0);
-    fcntl(sockfd, F_SETFL, O_NONBLOCK);
+    sockfd = perr(socket(AF_INET, SOCK_STREAM, 0), "Failed to create socket");
+    perr(fcntl(sockfd, F_SETFL, O_NONBLOCK), "Failed to set non-blocking");
     fds.fd = sockfd;
-    if (sockfd == -1)
-    {
-        std::cout << "Failed to create socket" << std::endl;
-        return 1;
-    }
-    int status = setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval));
-    if (status == -1)
-    {
-        std::cout << "Failed to set socket options" << std::endl;
-        return 1;
-    }
+    int status = perr(setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &optval, sizeof(optval)), "Failed to set socket option");
     server_address.sin_family = AF_INET; 
     server_address.sin_addr.s_addr = INADDR_ANY; // it represents any address of the machine
     server_address.sin_port = htons(5000); 
     server_address.sin_zero[7] = '\0';
-    status = bind(sockfd, (struct sockaddr *)&server_address, sizeof(server_address));
-    if (status == -1)
-    {
-        std::cout << "Failed to bind socket" << std::endl;
-        return 1;
-    }
-
-    status = listen(sockfd, 5);
-    if (status == -1)
-    {
-        std::cout << "Failed to listen" << std::endl;
-        return 1;
-    }
+    status = perr(bind(sockfd, (struct sockaddr *)&server_address, sizeof(server_address)), "Failed to bind socket");
+    status = perr(listen(sockfd, 5), "Failed to listen");
     addrlen = sizeof(client_address);
-    for (;;) {
-    client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
-    if (client_sockfd == -1) {
-      if (errno == EWOULDBLOCK) {
-        printf("No pending connections; sleeping for one second.\n");
-        sleep(1);
-      } else {
-        perror("error when accepting connection");
-        exit(1);
-      }
-    } else {
-      char msg[] = "hello\n";
-      printf("Got a connection; writing 'hello' then closing.\n");
-      send(client_sockfd, msg, sizeof(msg), 0);
-      close(client_sockfd);
-    }
+    while (1)
+    {
+        client_sockfd = perr(accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen), "Failed to accept");
+        if (client_sockfd == -1)
+        {
+          if (errno == EWOULDBLOCK)
+          {
+            std::cout << "No client is connected" << std::endl;
+            sleep(1);
+          } else{
+            perror("error when accepting connection");
+            exit(1);
+          }
+        } else
+        {
+            perr(recv(client_sockfd, buffer, 100, 0), "Failed to receive");
+            std::cout << "Received message: " << buffer << std::endl;
+          std::string msg = "hello from server\n";
+          std::cout << "Sending message: " << msg << std::endl;
+          perr(send(client_sockfd, msg.c_str(), sizeof(msg), 0), "Failed to send");
+          close(client_sockfd);
+        }
   }
-    // client_sockfd = accept(sockfd, (struct sockaddr *)&client_address, (socklen_t *)&addrlen);
-    // if (client_sockfd == -1)
-    // {
-    //     std::cout << "Failed to accept" << std::endl;
-    //     return 1;
-    // }
-    // std::cout << "Hang \n";
-    // status = recv(client_sockfd, buffer, 100, 0);
-    // if (status == -1)
-    // {
-    //     std::cout << "Failed to receive" << std::endl;
-    //     return 1;
-    // }
-    // std::cout << "Received message: " << buffer << std::endl;
-    // status = send(client_sockfd, "Hello from server\n", 19, 0);
-    //  if (status == -1)
-    // {
-    //     std::cout << "Failed to send" << std::endl;
-    //     return 1;
-    // }
-    // close(client_sockfd);
     close(sockfd);
     return 0;
 }
