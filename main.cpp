@@ -37,24 +37,30 @@ int main()
     fds[0].events = POLLIN;
     fds[1].fd = 0;
     fds[1].events = POLLIN;
-    while (true)
+    while (1)
     {
         perr(poll(fds, 2, -1), "poll");
         if (fds[0].revents & POLLIN)
         {
-            char buf[1024];
+            char buf[1024] = {0};
             int n = perr(recv(newsockfd, buf, sizeof(buf), 0), "recv");
+            std::cout << buf << std::endl;
+
             if (n == 0)
             {
                 break;
             }
-            perr(send(newsockfd, buf, n, 0), "send");
+            perr(send(newsockfd, "hello from server \n", 19, 0), "send");
         }
         if (fds[1].revents & POLLIN)
         {
             char buf[1024];
-            int n = perr(read(0, buf, sizeof(buf)), "read");
+            int n = perr(recv(newsockfd, buf, sizeof(buf), 0), "recv");
             perr(send(newsockfd, buf, n, 0), "send");
+            std::cout << buf << std::endl;
+            if (n == 0)
+              break;
+            perr(send(newsockfd, "hello from server \n", 19, 0), "send");
         }
     }
 }
