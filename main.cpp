@@ -9,8 +9,11 @@
 #include <errno.h>
 #include "Server.hpp"
 
-int main()
+int main(int ac, char **av)
 {
+  if (ac == 3){
   Server server;
-  server.severInit();
+  server.severInit(av);
+  }
+  else std::cout << "try writing like this : ./ircserv [port] [password] " << std::endl;
 }

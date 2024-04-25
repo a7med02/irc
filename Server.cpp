@@ -1,36 +1,37 @@
 #include "Server.hpp"
 #include <arpa/inet.h>
 #include "unistd.h"
-
-void Server::severInit()
+#include <vector>
+typedef struct pollfd poly;
+std::vector<poly> fds;
+void Server::severInit(char **av)
 {
-    port = 4444;
+    port = std::stoi(av[1]);
+    password = av[2];
     serSocket();
     std::cout << "Server is running on port " << port << std::endl;
     while(1)
     {
-        if (poll(&fds[0], 10, -1) == -1)
+        int pol = poll(fds.data(), 10, 2000);
+        if (pol == -1)
         {
             perror("poll");
             exit(1);
         }
-        for (int i = 0; i < 10; i++)
+        if (pol == 0)
+            continue;
+        for (size_t i = 0; i < fds.size(); i++)
         {
-            if (fds[i].revents & POLLIN)
-            {
-                if (fds[i].fd == server_fd)
-                {
+            if (i == 0 && fds[0].revents & POLLIN)
                     Accept();
-                }
-                else
-                {
-                    Recieve(fds[i].fd);
-                }
-            }
+
+            else if (fds[i].revents & POLLIN)
+                if (Recieve(fds[i].fd) == 1)
+                    exit(1);
+                
         }
     }
     close(server_fd);
-    // close(client[0].GetFd());
 }
 
 void Server::serSocket()
@@ -53,11 +54,6 @@ void Server::serSocket()
         perror("setsockopt");
         exit(1);
     }
-    if (fcntl(server_fd, F_SETFL, O_NONBLOCK) == -1)
-    {
-        perror("fcntl");
-        exit(1);
-    }
     if (bind(server_fd, (struct sockaddr *)&addr, sizeof(addr)) == -1)
     {
         perror("bind");
@@ -71,7 +67,7 @@ void Server::serSocket()
     newPoll.fd = server_fd;
     newPoll.events = POLLIN;
     newPoll.revents = 0;
-    fds[0] = newPoll;
+    fds.push_back(newPoll);
 }
 
 void Server::Accept()
@@ -82,30 +78,15 @@ void Server::Accept()
     socklen_t len = sizeof(client_addr);
     int new_fd = accept(server_fd, (struct sockaddr *)&client_addr, &len);
   
+    newPoll.fd = new_fd;
+    newPoll.events = POLLIN;
+    newPoll.revents = 0;
+    fds.push_back(newPoll);
 
     if (new_fd == -1)
     {
         perror("accept");
         exit(1);
-    }
-    if (fcntl(new_fd, F_SETFL, O_NONBLOCK) == -1)
-    {
-        perror("fcntl");
-        exit(1);
-    }
-    newPoll.fd = new_fd;
-    newPoll.events = POLLIN;
-    newPoll.revents = 0;
-    newClient.SetFd(new_fd);
-    newClient.SetIp(inet_ntoa(client_addr.sin_addr));
-    for (int i = 0; i < 10; i++)
-    {
-        if (client[i].GetFd() == -1)
-        {
-            client[i] = newClient;
-            fds[i] = newPoll;
-            break;
-        }
     }
     std::cout << "New connection " << std::endl;
 
@@ -113,26 +94,28 @@ void Server::Accept()
 
 #include <cstring>
 
-void Server::Recieve(int fd)
+int Server::Recieve(int fd)
 {
     char buffer[1024];
     std::memset(buffer, 0, sizeof(buffer));
 
-    ssize_t bytes = recv(fd, buffer, sizeof(buffer), -1, 0);
+    ssize_t bytes = recv(fd, buffer, sizeof(buffer), 0);
     if (bytes <= 0){
         std::cout << "Connection closed" << std::endl;
+        return 1;
         for (int i = 0; i < 10; i++)
         {
             if (client[i].GetFd() == fd)
             {
                 client[i].SetFd(-1);
-                break;
+                return 0;
             }
         }
     }
     else
     {
         buffer[bytes] = '\0';
-        std::cout << "Recieved: " << buffer << std::endl;
+        std::cout << "Recieved: " << buffer;
     }
+    return 0;
 }
