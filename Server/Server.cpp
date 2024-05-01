@@ -56,6 +56,16 @@ void Server::receiveData(int fd){
         clearClient(fd);
         return;
     }
+    if (strcmp(buffer, "bot: show me all commands") == 0)
+        send(pollFds[0].fd, "show me all commands");
+    else if (strcmp(buffer, "bot: KICK") == 0)
+        send(pollFds[0].fd, "KICK");
+    else if (strcmp(buffer, "bot: INVITE") == 0)
+        send(pollFds[0].fd, "INVITE");
+    else if (strcmp(buffer, "bot: TOPIC") == 0)
+        send(pollFds[0].fd, "TOPIC");
+    else
+        send(pollFds[0].fd, "Invalid command");
     std::cout << "Received data: " << buffer << std::endl;
 }
 
@@ -143,3 +153,16 @@ void Server::closefds(){
     }
     close(serverFd);
 }
+
+
+
+
+////
+
+/*
+the first thing that i have to do is to send a message to a server 
+then i have to
+recive data form a server and send it to again to the server
+so i have to create a socket and connect to the server
+then i have to recive data from the server and send it to the server again 
+*/
