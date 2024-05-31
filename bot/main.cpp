@@ -1,21 +1,43 @@
-#include <iostream>
-#include "Bot.hpp"
+#include "bot.hpp"
 
-int main()
+int main(int ac, char **av)
 {
-    Bot bt;
-    bt.fdSocket = socket(AF_INET, SOCK_STREAM, 0);
-    if (bt.fdSocket == -1)
-        exit(1);
-    int opt = 1;
-    int status = setsockopt(bt.fdSocket, IPPROTO_TCP , SO_REUSEADDR, &opt, sizeof(opt));
-    if (status = -1)
-        exit;
-    bt.serverAddress.sin_family = AF_INET;
-    bt.serverAddress.sin_port = htons(4444);
-    bt.serverAddress.sin_addr.s_addr = INADDR_ANY;
-    status = bind(bt.fdSocket, (struct sockaddr_in*)&bt.serverAddress, sizeof(sockaddr));
-    
-
-
-}
+    if (ac != 3){
+        std::cerr << "Usage: ./bot <password>" << std::endl;
+        return 1;
+    }
+    Bot bot(av[2]);
+    std::string response = "";
+    std::string clinetName = "";
+    size_t contentLength = 0;
+    while (true)
+    {
+        int ret = poll(bot.fds.data(), bot.fds.size(), -1);
+        if (ret == -1){
+            std::cerr << "poll failed" << std::endl;
+            return 1;
+        }
+        if (bot.fds[0].revents & POLLIN){
+            std::cout << "0" << std::endl;
+            clinetName = bot.receiveMessageFromServer(bot.fds[0].fd);
+            if (clinetName != ""){
+                bot.sendToApi(bot.fds);
+                bot.fds[1].events = POLLIN;
+            }
+        }
+        if (bot.fds[1].revents & POLLIN){
+            std::cout << "1" << std::endl;
+            while (response.size() <= contentLength ){
+                contentLength += bot.receiveFromApi(bot.fds, response);
+                if (response != "" && response.size() > contentLength){
+                    std::cout << contentLength << std::endl;
+                    std::cout << response << std::endl;
+                    exit(-1);
+                    bot.sendMessageToServer(bot.fds[0].fd, response, clinetName);
+                        bot.fds[1].events = POLLOUT;
+                    }
+            }
+        }
+        }
+        return 0;
+    }
