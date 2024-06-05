@@ -1,12 +1,12 @@
 SRC = main.cpp bot.cpp
 NAME = bot
 CC = c++
-CFLAGS = -Wall -Wextra -Werror -std=c++98 -g
+CFLAGS = -Wall -Wextra -Werror -std=c++98 -lcurl
 RM = rm -f
 OBJ = $(SRC:.cpp=.o)
 
 %.o: %.cpp %.hpp
-	$(CC) $(CFLAGS) -c $< -o $@
+
 
 all: $(NAME)
 
